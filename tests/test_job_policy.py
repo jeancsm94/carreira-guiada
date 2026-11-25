@@ -44,6 +44,22 @@ class PolicyTests(unittest.TestCase):
         self.p['languages'] = [{'name': 'Idioma sintético', 'level': 3, 'required': False}]
         self.assertEqual(self.decision(), 'eligible')
 
+    def test_pcd_only_vacancy_follows_declared_pcd(self):
+        self.v['pcd_only'] = True
+        self.assertEqual(self.decision(), 'blocked')
+        self.p['pcd'] = False
+        self.assertEqual(evaluate(self.p, self.v), {'decision': 'discarded', 'reasons': ['Vaga exclusiva para PcD.']})
+        self.p['pcd'] = True
+        self.assertEqual(self.decision(), 'eligible')
+        self.p['pcd'] = False
+        for not_declared_exclusive in (False, None):
+            self.v['pcd_only'] = not_declared_exclusive
+            self.assertEqual(self.decision(), 'eligible')
+        self.v['pcd_only'] = 'sim'
+        with self.assertRaises(ValueError): self.decision()
+        self.p['pcd'] = None
+        with self.assertRaises(ValueError): evaluate(self.p, {})
+
     def test_unmentioned_languages_only_block_an_active_language_filter(self):
         self.v.pop('languages')
         for missing in ('ask', 'reject', 'accept'):

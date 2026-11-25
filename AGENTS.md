@@ -233,6 +233,8 @@ Reaproveite fatos já confirmados no currículo, sem repetir a pergunta.
   Pergunte o piso em linguagem simples ("qual é o menor valor mensal que você
   aceita em contrato CLT?"). Não sugira valor. "Não sei" deixa o piso vazio e
   a política de salário ausente decide o que acontece com vagas sem valor.
+  `pcd` é opcional e sensível: nunca pergunte. Registre `true` ou `false`
+  somente quando a pessoa informar por conta própria.
 - `sources`: lista privada `urls`, fornecida pela pessoa. Pergunte os links e
   ajude a copiar a barra do navegador. "Deixe para depois" salva lista vazia:
   o currículo pode continuar, mas a pesquisa espera por links aprovados. Não
@@ -311,6 +313,8 @@ Regras que o agente preserva ao montar o payload da vaga:
   Não infira fluência pelo título.
 - Considere o cargo ofertado, não o cargo passado da pessoa nem menções a
   colegas na descrição.
+- Vaga declarada exclusiva para PcD entra com `pcd_only: true`. Preferência
+  ou mensagem de inclusão não torna a vaga exclusiva.
 - Bloqueios de empresa, setor e plataforma vêm do perfil. Uma empresa
   bloqueada como empregadora não bloqueia outras empresas hospedadas no mesmo
   sistema de recrutamento. Plataforma bloqueada vale para triagem, teste e
