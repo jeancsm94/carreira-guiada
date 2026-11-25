@@ -10,6 +10,8 @@ salary: {missing: 'ask'|'reject'|'accept', estimated: 'ask'|'reject'|'accept',
 range: 'ask'|'minimum'|'maximum', floors: [{contract: str, currency: str,
 period: 'hour'|'month'|'year', amount: número positivo}],
 public_expectation: null|{currency: str, period: ..., amount: número positivo}}.
+pcd (opcional): booleano, só quando a pessoa informar se é pessoa com
+deficiência; nunca perguntado no preparo. Ausente equivale a não informado.
 
 Vacancy: objeto com campos opcionais role, modality, currency (não utilizado;
 a moeda deve constar em salary), level, contract, location, company, sector,
@@ -17,7 +19,10 @@ platform: string|null; technologies: [str]|null;
 languages: [{name: str, level: int 1..6, required: bool}]|null;
 salary: null|{min: número positivo|null, max: número positivo|null,
 currency: str, period: 'hour'|'month'|'year', estimated: bool,
-guaranteed_hours_per_month: número positivo|null (opcional)}.
+guaranteed_hours_per_month: número positivo|null (opcional)};
+pcd_only: booleano|null, true somente quando o anúncio declarar a vaga
+exclusiva para PcD (preferência ou afirmação de inclusão não conta).
+Vaga exclusiva descarta se pcd=false e fica pendente se pcd não foi informado.
 Ao menos uma ponta salarial deve existir. Nomes e categorias são comparados
 por igualdade normalizada de caixa e acentos. Valores com ponto e sem
 espaços (domínios/identificadores) preservam acentos; não há busca por trechos.
@@ -105,8 +110,11 @@ def money(value, floor=False):
 
 
 def validate_preferences(value, complete=True):
-    keys = LISTS + ('missing', 'languages', 'salary')
-    obj(value, keys, keys if complete else ())
+    required = LISTS + ('missing', 'languages', 'salary')
+    # pcd is optional so profiles approved before the field existed stay valid.
+    obj(value, required + ('pcd',), required if complete else ())
+    if 'pcd' in value and type(value['pcd']) is not bool:
+        raise ValueError('pcd deve ser booleano.')
     for key in LISTS:
         if key in value:
             strings(value[key])
@@ -144,10 +152,12 @@ def evaluate(preferences, vacancy):
     """
     validate_preferences(preferences)
     scalar = ('role', 'modality', 'currency', 'level', 'contract', 'location', 'company', 'sector', 'platform')
-    obj(vacancy, scalar + ('technologies', 'languages', 'salary'))
+    obj(vacancy, scalar + ('technologies', 'languages', 'salary', 'pcd_only'))
     for key in scalar:
         if vacancy.get(key) is not None:
             string(vacancy[key])
+    if vacancy.get('pcd_only') is not None and type(vacancy['pcd_only']) is not bool:
+        raise ValueError('pcd_only deve ser booleano ou null.')
     if vacancy.get('technologies') is not None:
         strings(vacancy['technologies'])
     if vacancy.get('languages') is not None:
@@ -179,6 +189,9 @@ def evaluate(preferences, vacancy):
         if preferences[p]:
             if vacancy.get(v) is None: absent('Bloqueio não verificável: ' + v)
             elif category(vacancy[v]) in categories(preferences[p]): rejected.append('Bloqueio: ' + v)
+    if vacancy.get('pcd_only'):
+        if preferences.get('pcd') is False: rejected.append('Vaga exclusiva para PcD.')
+        elif preferences.get('pcd') is None: pending.append('Vaga exclusiva para PcD; enquadramento da pessoa não informado.')
     if preferences['technologies']:
         if vacancy.get('technologies') is None: absent('Tecnologias ausentes.')
         elif not categories(preferences['technologies']) <= categories(vacancy['technologies']): rejected.append('Tecnologias exigidas ausentes.')
